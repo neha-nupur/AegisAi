@@ -1,0 +1,347 @@
+openapi: 3.0.3
+info:
+  title: AegisAI Model & Provider Service
+  description: >
+    Owns Provider and Model data for AegisAI (Assignment 2 boundary: Model &
+    Provider Service, owned by Shivam Kumar Soni). Rebuilt as REST for
+    Assignment 4, mirroring CampusEats' Catalogue Service exercise. The
+    RPC-style operations this replaces (registerProvider, registerModel,
+    listModels) are documented in Assignment 2's AegisAi.pdf, Section 3.5,
+    and in this file's NOTES.md companion.
+  version: "1.0.0"
+servers:
+  - url: http://localhost:6000
+    description: Local development server
+
+paths:
+  /providers:
+    post:
+      operationId: registerProvider
+      summary: Register a new AI provider (registerProvider / C15)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderCreate'
+      responses:
+        '201':
+          description: Provider created
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+        '400':
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Well-formed body the domain refuses (e.g. blank name)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /providers/{providerId}:
+    get:
+      operationId: getProvider
+      summary: Read a single provider
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Provider found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Provider'
+        '404':
+          description: Provider does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /providers/{providerId}/models:
+    post:
+      operationId: registerModel
+      summary: Register a model under a provider (registerModel / C16)
+      description: >
+        Safely retryable. Send an Idempotency-Key header; a repeated request
+        with the same key returns the original result instead of creating a
+        second model.
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: Idempotency-Key
+          in: header
+          required: false
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelCreate'
+      responses:
+        '201':
+          description: Model created (or original result, if the Idempotency-Key was already seen)
+          headers:
+            Location:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '400':
+          description: Malformed request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '404':
+          description: Provider does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Well-formed body the domain refuses (e.g. blank name/type)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+    get:
+      operationId: listModels
+      summary: List a provider's models, optionally filtered by active status (listModels / C17 input)
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: active
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: Matching models
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Model'
+        '404':
+          description: Provider does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /models/{modelId}/status:
+    patch:
+      operationId: setModelStatus
+      summary: >
+        Activate or deactivate a model (setModelStatus). Modelled as its own
+        sub-resource rather than a plain PATCH on the model itself — see
+        NOTES.md Part A5.
+      parameters:
+        - name: modelId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelStatusUpdate'
+      responses:
+        '200':
+          description: Status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Model'
+        '404':
+          description: Model does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '409':
+          description: Model is already in the requested status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '422':
+          description: Malformed or invalid body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+  /providers/{providerId}/health-check:
+    post:
+      operationId: checkProviderHealth
+      summary: >
+        Probe the provider's real endpoint (a thin, real slice of C18 —
+        "Invoke an AI Provider... using timeout, retry and circuit-breaker
+        protection"). Best-effort and non-blocking: the provider's stored
+        status/circuit_state are updated with the result, but this call can
+        never fail outright — see NOTES.md Part D3.
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Health check attempted; provider status reflects the outcome
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderWithHealthCheck'
+        '404':
+          description: Provider does not exist
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+
+components:
+  schemas:
+    ProviderCreate:
+      type: object
+      required: [name, base_url]
+      properties:
+        name:
+          type: string
+        base_url:
+          type: string
+        config_reference:
+          type: string
+          description: Pointer to externally-managed config/secrets, e.g. a secrets-manager key. Never the credential itself.
+
+    Provider:
+      type: object
+      properties:
+        provider_id:
+          type: integer
+        name:
+          type: string
+        base_url:
+          type: string
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+        circuit_state:
+          type: string
+          enum: [closed, open]
+        config_reference:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    ProviderWithHealthCheck:
+      allOf:
+        - $ref: '#/components/schemas/Provider'
+        - type: object
+          properties:
+            health_check:
+              type: object
+              properties:
+                checked:
+                  type: boolean
+                latency_ms:
+                  type: integer
+                  nullable: true
+                note:
+                  type: string
+
+    ModelCreate:
+      type: object
+      required: [name, type]
+      properties:
+        name:
+          type: string
+        type:
+          type: string
+          description: e.g. chat, embedding, image
+        sensitivity_level:
+          type: string
+          description: e.g. public, restricted, confidential
+        cost_metadata:
+          type: object
+          additionalProperties: true
+
+    Model:
+      type: object
+      properties:
+        model_id:
+          type: integer
+        provider_id:
+          type: integer
+        name:
+          type: string
+        type:
+          type: string
+        sensitivity_level:
+          type: string
+          nullable: true
+        cost_metadata:
+          type: object
+          nullable: true
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    ModelStatusUpdate:
+      type: object
+      required: [is_active]
+      properties:
+        is_active:
+          type: boolean
+        reason:
+          type: string
+
+    Problem:
+      type: object
+      required: [type, title, status, detail]
+      properties:
+        type:
+          type: string
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type: string
+        code:
+          type: string
