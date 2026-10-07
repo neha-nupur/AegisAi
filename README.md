@@ -570,26 +570,50 @@ AegisAI also treats external AI provider responses as untrusted data and avoids 
 
 ---
 
-# Assignment 2 Repository Structure
+# Repository Structure
 
-The current repository contains the deliverables for **Assignment 2**.
+The repository holds the deliverables for **Assignments 1, 2, 3 and 4** of CS 543, one folder
+per assignment, committed as the work progressed.
 
 ```text
 AegisAi/
 │
-└── Assignment 2/
-    │
-    ├── Task 1, 3, 4, 6/
-    │   └── AegisAi.pdf
-    │
-    ├── Task 2/
-    │   ├── AegisAIServices.drawio
-    │   └── AegisAIServices.drawio.png
-    │
-    └── Task 5/
-        ├── AegisAiSchema.sql
-        ├── AegisAiSchema.png
-        └── AegisAiSchema.drawio
+├── README.md                     <- this file
+├── ReadMe.pdf                    <- submission overview (repo + demo links)
+│
+├── Assignment 1/                 <- HTTP by Hand & Project Setup
+│   ├── brief.md                  <- the one-page system brief: what / who / nouns / verbs
+│   └── docs/
+│       ├── http-log.md           <- six annotated curl -i request/response pairs (one 404)
+│       └── network-analysis.md   <- a real page's waterfall, read and explained
+│
+├── Assignment 2/                 <- Services, Contracts and Schema
+│   ├── Task 1, 3, 4, 6/
+│   │   └── AegisAi.pdf
+│   ├── Task 2/
+│   │   ├── AegisAIServices.drawio
+│   │   └── AegisAIServices.drawio.png
+│   └── Task 5/
+│       ├── AegisAiSchema.sql
+│       ├── AegisAiERDiagram.drawio
+│       └── AegisAiERDiagram.drawio.png
+│
+├── Assignment 3/                 <- Integrate an External SOAP Partner
+│   ├── integration.pdf           <- context, HTTP binding, discovery, fault mapping
+│   ├── partner.wsdl              <- the partner contract we bind to
+│   ├── soap-request.xml
+│   ├── soap-response.xml
+│   └── soap-fault.xml
+│
+└── Assignment 4/                 <- Model & Provider Service in REST
+    ├── README.md  RUNME.md  requirements.txt  setup.bat
+    ├── run_service.bat  run_provider_stub.bat  run_tests.bat
+    ├── Evidence/
+    │   └── curl-transcript.txt
+    ├── Part A - Model the Service/    (NOTES.md)
+    ├── Part B - Publish the Contract/ (openapi.yaml, openapi-validation.txt)
+    ├── Part C - Implement It/         (app.py, models.py, store.py, errors.py, tests/)
+    └── Part D - Survive the Network/  (provider_client.py, stub_provider.py)
 ```
 
 ### Task 1, 3, 4, 6
@@ -650,6 +674,39 @@ Visual representation of the database schema.
 Editable Draw.io source file for the database schema.
 
 The database design follows the service ownership model used by the AegisAI architecture.
+
+---
+
+## Assignment 1 — HTTP by Hand & Project Setup
+
+Assignment 1 establishes the protocol foundation before any AegisAI code is written: read HTTP
+at the level of individual bytes, watch a real production page load, and state the system
+precisely enough that the statements can later become an API contract.
+
+| Deliverable | File | What it contains |
+|---|---|---|
+| Task 1 | `Assignment 1/docs/http-log.md` | Six `curl -i` request/response pairs against the public, read-only GitHub REST API — `200`, `200`, **`404` (deliberate)**, `401`, `422`, `301` — each with the command, the request as sent on the wire, the full raw response, and a one-line note on the status code and `Content-Type`. |
+| Task 2 | `Assignment 1/docs/network-analysis.md` | A cold-cache load of this repository's own GitHub page: **174 requests**, **2,094,889 bytes (≈ 2.00 MiB)**, the single slowest resource (a third-party host that times out), and every 3xx/4xx observed. |
+| Task 3 | this `README.md`, `Assignment 1/docs/` | A real README and a readable, incremental commit history. |
+| Task 4 | `Assignment 1/brief.md` | One page: what AegisAI does, who uses it, and its **nouns** (21) and **verbs** (16) listed explicitly. |
+
+---
+
+## Assignment 3 — Integrate an External SOAP Partner
+
+Assignment 3 takes one partner edge of AegisAI to the contract level: author the partner's WSDL,
+form the SOAP call by hand, show its HTTP binding, describe how it would be discovered, and map
+its fault back into AegisAI's own vocabulary. It is design-time only — no running server, no live
+gateway, and nothing here is a service AegisAI exposes.
+
+| Deliverable | File | What it contains |
+|---|---|---|
+| Task 1 | `Assignment 3/integration.pdf` → *Context* | The partner (an SMS/notification gateway) and the one operation integrated, plus why that edge is SOAP while the rest of AegisAI is REST. |
+| Task 2 | `Assignment 3/partner.wsdl` | A small but complete WSDL 1.1 contract carrying all six elements: `types`, `message`, `portType`, `binding` (SOAP 1.1 over HTTP) and `service`/`port` with a real-looking endpoint. |
+| Task 3 | `Assignment 3/soap-request.xml`, `soap-response.xml`, `soap-fault.xml` | Three envelopes matching the WSDL element for element: credentials in the Header, the call in the Body, a success response, and a `soap:Fault`. |
+| Task 4 | `Assignment 3/integration.pdf` → *HTTP binding* | The literal HTTP POST: method, `Host`, `Content-Type`, the `SOAPAction` value from the binding and the endpoint URL from the `service`/`port`. |
+| Task 5 | `Assignment 3/integration.pdf` → *Discovery* | Modern discovery in catalogue/registry form: a one-record entry with business, service, endpoint and a tModel-style pointer to the WSDL. No UDDI server is run. |
+| Task 6 | `Assignment 3/integration.pdf` → *Fault mapping* | The partner's fault codes mapped onto the errors AegisAI's own contract promises, so the partner's vocabulary never reaches AegisAI's callers. |
 
 ---
 
@@ -835,18 +892,17 @@ For example, privacy detection in the initial implementation is best-effort and 
 
 ---
 
-# Assignment 2 Deliverables
+# Deliverables
 
-This repository currently focuses on the Assignment 2 design and documentation deliverables:
+| Assignment | Folder | Submitted files |
+|---|---|---|
+| **1 — HTTP by Hand & Project Setup** | `Assignment 1/` | `README.md`, `http-log.md`, `network-analysis.md`, `brief.md` |
+| **2 — Services, Contracts and Schema** | `Assignment 2/` | `AegisAi.pdf`, service diagram (`.drawio`/`.png`), ER diagram, `AegisAiSchema.sql` |
+| **3 — Integrate an External SOAP Partner** | `Assignment 3/` | `integration.pdf`, `partner.wsdl`, `soap-request.xml`, `soap-response.xml`, `soap-fault.xml` |
+| **4 — Model & Provider Service in REST** | `Assignment 4/` | `openapi.yaml`, implemented service with tests, resilience layer, `curl-transcript.txt` |
+| **Submission** | repo root | `ReadMe.pdf` — overview, repository link and demo link |
 
-* Project documentation
-* Service architecture
-* Database schema
-* Architecture diagrams
-* Editable Draw.io diagrams
-* SQL database schema
-
-Additional implementation files and deliverables can be added as the AegisAI project progresses.
+Additional implementation files and deliverables will be added as the AegisAI project progresses.
 
 ---
 
@@ -897,8 +953,9 @@ All three members collaboratively contribute to the design, documentation, archi
 
 **Project:** AegisAI
 **Title:** Enterprise AI Security & Governance Gateway
-**Course:** Web Services / Distributed Systems
-**Assignment:** Assignment 2
+**Course:** CS 543 — Web Services / Distributed Systems
+**Group:** 7
+**Assignments covered:** 1, 2, 3, 4
 **Architecture:** Service-oriented / Microservices-based
 **Team Size:** 3 Members
 **Primary Focus:** AI Security, Governance, Privacy, Reliability, Observability and Enterprise Integration
