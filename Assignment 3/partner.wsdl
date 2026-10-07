@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AegisAI - Assignment 3 (Task 2)
+  partner.wsdl : the contract AegisAI's consumer binds to.
+
+  Partner : Meridian Messaging Ltd. - Meridian SMS Notification Service, v1
+  Edge    : AegisAI -> Meridian SMS   (notify an approver / auditor by SMS)
+  Style   : document/literal, SOAP 1.1 over HTTP
+
+  All six mandatory WSDL 1.1 elements are present:
+      1. wsdl:types      -> the XSD vocabulary of the three messages
+      2. wsdl:message    -> SendSMSInput, SendSMSOutput, SendSMSFaultMessage
+      3. wsdl:portType   -> NotificationPortType / operation sendSMS
+      4. wsdl:binding    -> NotificationSoap11Binding (SOAP over HTTP)
+      5. wsdl:service    -> NotificationService
+      6. wsdl:port       -> NotificationPort, carrying the endpoint URL
+
+  The SOAPAction value declared in the binding is
+      "https://api.meridian-sms.com/ws/v1/notifications/sendSMS"
+  and it is the exact value quoted in the HTTP POST shown in integration.pdf.
+-->
+<wsdl:definitions
+    xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:tns="https://api.meridian-sms.com/ws/sms/v1"
+    targetNamespace="https://api.meridian-sms.com/ws/sms/v1"
+    name="NotificationService">
+
+  <!-- ==============================================================
+       1. wsdl:types
+       The element-form vocabulary. Both requests and responses are
+       document/literal and elementFormDefault="qualified", so every
+       child of the SOAP Body is namespace-qualified with tns.
+       ============================================================== -->
+  <wsdl:types>
+    <!-- The schema re-declares the namespaces it uses so that it is
+         self-contained: it can be lifted out of this WSDL and fed straight
+         to an XML Schema validator. -->
+    <xsd:schema xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+                xmlns:tns="https://api.meridian-sms.com/ws/sms/v1"
+                targetNamespace="https://api.meridian-sms.com/ws/sms/v1"
+                elementFormDefault="qualified"
+                attributeFormDefault="unqualified">
+
+      <!-- shared simple types -->
+
+      <xsd:simpleType name="E164">
+        <xsd:annotation>
+          <xsd:documentation>An international MSISDN in E.164 form, e.g. +919876543210.</xsd:documentation>
+        </xsd:annotation>
+        <xsd:restriction base="xsd:string">
+          <xsd:pattern value="\+[1-9][0-9]{1,14}"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="SenderId">
+        <xsd:restriction base="xsd:string">
+          <xsd:minLength value="1"/>
+          <xsd:maxLength value="11"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="Priority">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="NORMAL"/>
+          <xsd:enumeration value="HIGH"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <xsd:simpleType name="DeliveryStatus">
+        <xsd:restriction base="xsd:string">
+          <xsd:enumeration value="ACCEPTED"/>
+          <xsd:enumeration value="QUEUED"/>
+          <xsd:enumeration value="REJECTED"/>
+        </xsd:restriction>
+      </xsd:simpleType>
+
+      <!-- the request: AegisAI calls Meridian -->
+
+      <xsd:element name="SendSMSRequest">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="clientId" type="xsd:string"/>
+            <xsd:element name="correlationId" type="xsd:string"/>
+            <xsd:element name="to" type="tns:E164"/>
+            <xsd:element name="templateId" type="xsd:string"/>
+            <xsd:element name="variables" minOccurs="0">
+              <xsd:complexType>
+                <xsd:sequence>
+                  <xsd:element name="variable" minOccurs="0" maxOccurs="unbounded">
+                    <xsd:complexType>
+                      <xsd:sequence>
+                        <xsd:element name="key" type="xsd:string"/>
+                        <xsd:element name="value" type="xsd:string"/>
+                      </xsd:sequence>
+                    </xsd:complexType>
+                  </xsd:element>
+                </xsd:sequence>
+              </xsd:complexType>
+            </xsd:element>
+            <xsd:element name="senderId" type="tns:SenderId"/>
+            <xsd:element name="priority" type="tns:Priority"/>
+            <xsd:element name="callbackUrl" type="xsd:anyURI" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <!-- the response: Meridian replies to AegisAI -->
+
+      <xsd:element name="SendSMSResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="messageId" type="xsd:string"/>
+            <xsd:element name="status" type="tns:DeliveryStatus"/>
+            <xsd:element name="segments" type="xsd:int"/>
+            <xsd:element name="acceptedAt" type="xsd:dateTime"/>
+            <xsd:element name="vendorReference" type="xsd:string" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <!-- the declared fault: Meridian reports failure to AegisAI -->
+
+      <xsd:element name="SendSMSFault">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="faultCode" type="xsd:string"/>
+            <xsd:element name="faultString" type="xsd:string"/>
+            <xsd:element name="retryable" type="xsd:boolean"/>
+            <xsd:element name="partnerTraceId" type="xsd:string"/>
+            <xsd:element name="retryAfterSeconds" type="xsd:int" minOccurs="0"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </wsdl:types>
+
+  <!-- ==============================================================
+       2. wsdl:message   (three messages: in, out, fault)
+       ============================================================== -->
+  <wsdl:message name="SendSMSInput">
+    <wsdl:part name="body" element="tns:SendSMSRequest"/>
+  </wsdl:message>
+
+  <wsdl:message name="SendSMSOutput">
+    <wsdl:part name="body" element="tns:SendSMSResponse"/>
+  </wsdl:message>
+
+  <wsdl:message name="SendSMSFaultMessage">
+    <wsdl:part name="fault" element="tns:SendSMSFault"/>
+  </wsdl:message>
+
+  <!-- ==============================================================
+       3. wsdl:portType   (the abstract contract)
+       ============================================================== -->
+  <wsdl:portType name="NotificationPortType">
+    <wsdl:operation name="sendSMS">
+      <wsdl:input  message="tns:SendSMSInput"      name="SendSMSInput"/>
+      <wsdl:output message="tns:SendSMSOutput"     name="SendSMSOutput"/>
+      <wsdl:fault  message="tns:SendSMSFaultMessage" name="SendSMSFault"/>
+    </wsdl:operation>
+  </wsdl:portType>
+
+  <!-- ==============================================================
+       4. wsdl:binding    (SOAP 1.1 over HTTP : the wire contract)
+       ============================================================== -->
+  <wsdl:binding name="NotificationSoap11Binding" type="tns:NotificationPortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+
+    <wsdl:operation name="sendSMS">
+      <soap:operation soapAction="https://api.meridian-sms.com/ws/v1/notifications/sendSMS"/>
+      <wsdl:input>
+        <soap:body use="literal"/>
+      </wsdl:input>
+      <wsdl:output>
+        <soap:body use="literal"/>
+      </wsdl:output>
+      <wsdl:fault name="SendSMSFault">
+        <soap:fault name="SendSMSFault" use="literal"/>
+      </wsdl:fault>
+    </wsdl:operation>
+  </wsdl:binding>
+
+  <!-- ==============================================================
+       5. wsdl:service  and  6. wsdl:port   (the deployed endpoint)
+       ============================================================== -->
+  <wsdl:service name="NotificationService">
+    <wsdl:port name="NotificationPort" binding="tns:NotificationSoap11Binding">
+      <soap:address location="https://api.meridian-sms.com/ws/v1/notifications"/>
+    </wsdl:port>
+  </wsdl:service>
+
+</wsdl:definitions>
