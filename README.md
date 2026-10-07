@@ -572,20 +572,20 @@ AegisAI also treats external AI provider responses as untrusted data and avoids 
 
 # Repository Structure
 
-The repository holds the deliverables for **Assignments 1, 2, 3 and 4** of CS 543, one folder
-per assignment, committed as the work progressed.
+The repository holds the deliverables for **Assignments 1, 2, 3 and 4** of CS 543.
+Assignment 1 lives at the repository root, because that is where its brief says the four files
+go; each later assignment has its own folder. Everything was committed as the work progressed.
 
 ```text
 AegisAi/
 │
-├── README.md                     <- this file
+├── README.md                     <- this file  (A1 Task 3)
 ├── ReadMe.pdf                    <- submission overview (repo + demo links)
-│
-├── Assignment 1/                 <- HTTP by Hand & Project Setup
-│   ├── brief.md                  <- the one-page system brief: what / who / nouns / verbs
-│   └── docs/
-│       ├── http-log.md           <- six annotated curl -i request/response pairs (one 404)
-│       └── network-analysis.md   <- a real page's waterfall, read and explained
+├── brief.md                      <- A1 Task 4: the one-page brief: what / who / nouns / verbs
+├── docs/                         <- A1 Tasks 1 & 2
+│   ├── http-log.md               <- six annotated curl -i request/response pairs (one 404)
+│   └── network-analysis.md       <- a real page's waterfall, read and explained
+├── .gitignore
 │
 ├── Assignment 2/                 <- Services, Contracts and Schema
 │   ├── Task 1, 3, 4, 6/
@@ -603,7 +603,8 @@ AegisAi/
 │   ├── partner.wsdl              <- the partner contract we bind to
 │   ├── soap-request.xml
 │   ├── soap-response.xml
-│   └── soap-fault.xml
+│   ├── soap-fault.xml
+│   └── verification.txt          <- 27 machine checks over the four files above
 │
 └── Assignment 4/                 <- Model & Provider Service in REST
     ├── README.md  RUNME.md  requirements.txt  setup.bat
@@ -685,10 +686,10 @@ precisely enough that the statements can later become an API contract.
 
 | Deliverable | File | What it contains |
 |---|---|---|
-| Task 1 | `Assignment 1/docs/http-log.md` | Six `curl -i` request/response pairs against the public, read-only GitHub REST API — `200`, `200`, **`404` (deliberate)**, `401`, `422`, `301` — each with the command, the request as sent on the wire, the full raw response, and a one-line note on the status code and `Content-Type`. |
-| Task 2 | `Assignment 1/docs/network-analysis.md` | A cold-cache load of this repository's own GitHub page: **174 requests**, **2,094,889 bytes (≈ 2.00 MiB)**, the single slowest resource (a third-party host that times out), and every 3xx/4xx observed. |
-| Task 3 | this `README.md`, `Assignment 1/docs/` | A real README and a readable, incremental commit history. |
-| Task 4 | `Assignment 1/brief.md` | One page: what AegisAI does, who uses it, and its **nouns** (21) and **verbs** (16) listed explicitly. |
+| Task 1 | `docs/http-log.md` | Six `curl -i` request/response pairs against the public, read-only GitHub REST API — `200`, `200`, **`404` (deliberate)**, `401`, `422`, `301` — each with the command, the request as sent on the wire, the full raw response, and a one-line note on the status code and `Content-Type`. |
+| Task 2 | `docs/network-analysis.md` | A cold-cache load of this repository's own GitHub page: **174 requests**, **2,094,889 bytes (≈ 2.00 MiB)**, the single slowest resource (a third-party host that times out), and every 3xx/4xx observed. |
+| Task 3 | this `README.md` and `docs/` | A real README and a readable, incremental commit history. |
+| Task 4 | `brief.md` | One page: what AegisAI does, who uses it, and its **nouns** (21) and **verbs** (16) listed explicitly. |
 
 ---
 
@@ -707,6 +708,7 @@ gateway, and nothing here is a service AegisAI exposes.
 | Task 4 | `Assignment 3/integration.pdf` → *HTTP binding* | The literal HTTP POST: method, `Host`, `Content-Type`, the `SOAPAction` value from the binding and the endpoint URL from the `service`/`port`. |
 | Task 5 | `Assignment 3/integration.pdf` → *Discovery* | Modern discovery in catalogue/registry form: a one-record entry with business, service, endpoint and a tModel-style pointer to the WSDL. No UDDI server is run. |
 | Task 6 | `Assignment 3/integration.pdf` → *Fault mapping* | The partner's fault codes mapped onto the errors AegisAI's own contract promises, so the partner's vocabulary never reaches AegisAI's callers. |
+| — | `Assignment 3/verification.txt` | Machine run over the submitted files: **27 checks passed, 0 failed**. |
 
 ---
 
@@ -896,7 +898,7 @@ For example, privacy detection in the initial implementation is best-effort and 
 
 | Assignment | Folder | Submitted files |
 |---|---|---|
-| **1 — HTTP by Hand & Project Setup** | `Assignment 1/` | `README.md`, `http-log.md`, `network-analysis.md`, `brief.md` |
+| **1 — HTTP by Hand & Project Setup** | repository root | `README.md`, `docs/http-log.md`, `docs/network-analysis.md`, `brief.md` |
 | **2 — Services, Contracts and Schema** | `Assignment 2/` | `AegisAi.pdf`, service diagram (`.drawio`/`.png`), ER diagram, `AegisAiSchema.sql` |
 | **3 — Integrate an External SOAP Partner** | `Assignment 3/` | `integration.pdf`, `partner.wsdl`, `soap-request.xml`, `soap-response.xml`, `soap-fault.xml` |
 | **4 — Model & Provider Service in REST** | `Assignment 4/` | `openapi.yaml`, implemented service with tests, resilience layer, `curl-transcript.txt` |
