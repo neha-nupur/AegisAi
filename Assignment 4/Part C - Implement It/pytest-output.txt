@@ -1,0 +1,16 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.1.1, pluggy-1.6.0 -- /usr/bin/python3
+cachedir: .pytest_cache
+rootdir: /home/claude/AegisAi/Assignment 4/Part C - Implement It
+collecting ... collected 8 items
+
+tests/test_model_provider.py::test_create_succeeds_with_right_code_and_location_header PASSED [ 12%]
+tests/test_model_provider.py::test_idempotent_repeat_returns_original_result PASSED [ 25%]
+tests/test_model_provider.py::test_malformed_body_returns_422 PASSED     [ 37%]
+tests/test_model_provider.py::test_unknown_id_returns_404 PASSED         [ 50%]
+tests/test_model_provider.py::test_state_conflict_returns_409 PASSED     [ 62%]
+tests/test_model_provider.py::test_filtered_list_by_query_string PASSED  [ 75%]
+tests/test_model_provider.py::test_health_check_degrades_when_provider_unreachable PASSED [ 87%]
+tests/test_model_provider.py::test_health_check_marks_provider_healthy_on_success PASSED [100%]
+
+============================== 8 passed in 0.29s ===============================
