@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:sms="https://api.meridian-sms.com/ws/sms/v1">
+  <soap:Header>
+    <wsse:Security>
+      <wsu:Timestamp wsu:Id="resp-ts">
+        <wsu:Created>2026-10-07T18:21:04.812Z</wsu:Created>
+        <wsu:Expires>2026-10-07T18:26:04.812Z</wsu:Expires>
+      </wsu:Timestamp>
+    </wsse:Security>
+  </soap:Header>
+  <soap:Body>
+    <sms:SendSMSResponse>
+      <sms:messageId>mm_20261007_182104_7c3f9a</sms:messageId>
+      <sms:status>ACCEPTED</sms:status>
+      <sms:segments>1</sms:segments>
+      <sms:acceptedAt>2026-10-07T18:21:04.812Z</sms:acceptedAt>
+      <sms:vendorReference>MMS-GB-4471902</sms:vendorReference>
+    </sms:SendSMSResponse>
+  </soap:Body>
+</soap:Envelope>

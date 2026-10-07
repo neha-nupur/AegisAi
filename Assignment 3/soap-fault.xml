@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" xmlns:sms="https://api.meridian-sms.com/ws/sms/v1">
+  <soap:Header>
+    <wsse:Security>
+      <wsu:Timestamp wsu:Id="fault-ts">
+        <wsu:Created>2026-10-07T18:21:05.104Z</wsu:Created>
+        <wsu:Expires>2026-10-07T18:26:05.104Z</wsu:Expires>
+      </wsu:Timestamp>
+    </wsse:Security>
+  </soap:Header>
+  <soap:Body>
+    <soap:Fault>
+      <faultcode>soap:Client</faultcode>
+      <faultstring>Message could not be delivered to the terminating carrier</faultstring>
+      <detail>
+        <sms:SendSMSFault>
+          <sms:faultCode>CARRIER_REJECTED</sms:faultCode>
+          <sms:faultString>MSISDN is barred or unreachable on the terminating carrier</sms:faultString>
+          <sms:retryable>false</sms:retryable>
+          <sms:partnerTraceId>mm-trace-8f41c2d9</sms:partnerTraceId>
+        </sms:SendSMSFault>
+      </detail>
+    </soap:Fault>
+  </soap:Body>
+</soap:Envelope>

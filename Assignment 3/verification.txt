@@ -1,0 +1,41 @@
+
+=== 1. partner.wsdl structure ===
+  PASS  root is wsdl:definitions
+  PASS  wsdl:types present (found 1)
+  PASS  wsdl:message x3 present (found 3)
+  PASS  wsdl:portType present (found 1)
+  PASS  wsdl:binding present (found 1)
+  PASS  wsdl:service present (found 1)
+  PASS  wsdl:port present (found 1)
+  PASS  portType declares operation sendSMS
+  PASS  input/output/fault messages resolve ['SendSMSFaultMessage', 'SendSMSInput', 'SendSMSOutput']
+  PASS  binding type -> portType
+  PASS  SOAPAction declared: https://api.meridian-sms.com/ws/v1/notifications/sendSMS
+  PASS  binding transport is SOAP-over-HTTP
+  PASS  binding style is document
+  PASS  port -> binding
+  PASS  endpoint URL from service/port: https://api.meridian-sms.com/ws/v1/notifications
+  PASS  wsdl:types schema parses as valid XSD
+
+=== 2. envelopes match the WSDL element-for-element ===
+  PASS  soap-request.xml: <SendSMSRequest> validates against the WSDL schema (valid)
+  PASS  soap-response.xml: <SendSMSResponse> validates against the WSDL schema (valid)
+  PASS  soap-fault.xml: <SendSMSFault> validates against the WSDL schema (valid)
+
+=== 3. request child order vs xsd:sequence ===
+  PASS  order ['clientId', 'correlationId', 'to', 'templateId', 'variables', 'senderId', 'priority', 'callbackUrl']
+          declared ['clientId', 'correlationId', 'to', 'templateId', 'variables', 'senderId', 'priority', 'callbackUrl']
+
+=== 4. WS-Security signature ===
+  PASS  Reference #ts DigestValue matches (exc-c14n + SHA-1)
+  PASS  Reference #body DigestValue matches (exc-c14n + SHA-1)
+  PASS  SignedInfo RSA-SHA1 verifies against the embedded certificate (Verified OK)
+  PASS  UsernameToken PasswordDigest = Base64(SHA1(nonce + created + password))
+
+=== 5. fault ===
+  PASS  soap:Fault present in the Body
+  PASS  faultcode is soap:Client
+  PASS  detail carries the declared tns:SendSMSFault element
+
+27 passed, 0 failed
+exit=0
