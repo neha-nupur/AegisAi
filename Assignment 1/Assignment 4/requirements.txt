@@ -1,4 +1,0 @@
-Flask
-requests
-pytest
-openapi-spec-validator
