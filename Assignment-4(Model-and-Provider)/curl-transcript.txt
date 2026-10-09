@@ -1,0 +1,42 @@
+### 1. Create provider
+POST /v1/providers -> HTTP 201
+Location: /v1/providers/prov-1
+{"providerId":"prov-1","name":"OpenAI","status":"registered"}
+
+### 2. Idempotent repeat (same key)
+POST /v1/providers -> HTTP 200
+{"providerId":"prov-1","name":"OpenAI","status":"registered"}
+
+### 3. Malformed body
+POST /v1/providers -> HTTP 400
+{"type":"/errors/invalid-request","title":"Invalid request","status":400,"detail":"Provider configuration is invalid","errors":[["name","required non-empty string"],["type","must be one of openai, gemini, local, custom"]],"traceId":"31153919-1727-4ec0-804c-41537ebe0f12"}
+
+### 4. State conflict (duplicate name)
+POST /v1/providers -> HTTP 409
+{"type":"/errors/provider-conflict","title":"Provider already registered","status":409,"detail":"Provider 'OpenAI' is already registered","traceId":"0b346562-e927-479f-b8eb-33778d741777"}
+
+### 5. Missing resource
+GET /v1/providers/prov-999/health -> HTTP 404
+{"type":"/errors/provider-not-found","title":"Provider not found","status":404,"detail":"No provider prov-999","traceId":"b3e93512-0b08-4720-9dea-359432d116fa"}
+
+### 6. Register model
+POST /v1/providers/prov-1/models -> HTTP 201
+Location: /v1/providers/prov-1/models/model-1
+{"modelId":"model-1","providerId":"prov-1","name":"gpt-model"}
+
+### 7. Filtered list
+GET /v1/models?capability=summarization -> HTTP 200
+{"models":[{"modelId":"model-1","name":"gpt-model","providerId":"prov-1","providerName":"OpenAI","capabilities":["text-generation","summarization"],"sensitivityLevel":"internal","enabled":true}]}
+
+### 8. Single model read
+GET /v1/providers/prov-1/models/model-1 -> HTTP 200
+{"modelId":"model-1","name":"gpt-model","providerId":"prov-1","providerName":"OpenAI","capabilities":["text-generation","summarization"],"sensitivityLevel":"internal","enabled":true}
+
+### 9. Provider health
+GET /v1/providers/prov-1/health -> HTTP 200
+{"providerId":"prov-1","status":"healthy","circuitState":"closed","lastCheckedAt":"2026-10-09T12:06:35.582Z","latencyMs":null}
+
+### 10. Route and invoke
+POST /v1/route-and-invoke -> HTTP 200
+{"response":"[OpenAI/openai mock] summarise AegisAI","modelUsed":"model-1","providerId":"prov-1","latencyMs":23,"status":"success","traceId":"req-1"}
+
