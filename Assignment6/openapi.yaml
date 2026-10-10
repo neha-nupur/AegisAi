@@ -1,0 +1,686 @@
+
+openapi: 3.0.3
+
+info:
+  title: AegisAI Model and Provider Service API
+  version: 1.0.0
+  description: >
+    API contract for registering AI providers and models, listing available
+    models, routing AI requests to suitable providers, and checking provider
+    health. Provider credentials and internal implementation details are
+    not exposed through this API.
+
+servers:
+  - url: http://localhost:8002
+    description: Local development server
+
+tags:
+  - name: Models
+    description: Register and list AI models
+  - name: Providers
+    description: Register providers and monitor their health
+  - name: Routing
+    description: Select a model and invoke an AI provider
+
+security:
+  - bearerAuth: []
+
+paths:
+
+  /v1/models:
+    get:
+      tags:
+        - Models
+      operationId: listModels
+      summary: List available models and providers
+      description: >
+        Returns models and their associated providers, optionally filtered
+        by capability or other supported criteria.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+        - name: capability
+          in: query
+          required: false
+          schema:
+            type: string
+          description: Filter models by supported capability.
+        - name: sensitivityLevel
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/SensitivityLevel'
+        - name: page
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: Page number (A4 list pagination).
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: Page size.
+        - name: sort
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [createdAt, name]
+            default: createdAt
+        - name: order
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [asc, desc]
+            default: asc
+      responses:
+        '200':
+          description: Available models and providers
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - models
+                properties:
+                  models:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Model'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NotAuthorised'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/providers:
+    post:
+      tags:
+        - Providers
+      operationId: registerProvider
+      summary: Register an AI provider
+      description: >
+        Registers a provider such as OpenAI, Gemini, or a controlled
+        local AI provider.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderConfiguration'
+      responses:
+        '201':
+          description: Provider registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - providerId
+                  - name
+                  - status
+                properties:
+                  providerId:
+                    type: string
+                    description: Public provider reference.
+                  name:
+                    type: string
+                  status:
+                    type: string
+                    example: registered
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NotAuthorised'
+        '409':
+          description: Provider already registered or conflicts with existing configuration.
+        '429':
+          description: Rate limit exceeded (Retry-After + X-RateLimit headers).
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/providers/{providerId}:
+    get:
+      tags:
+        - Providers
+      operationId: getProvider
+      summary: Read a single provider (ETag cached)
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/IfNoneMatch'
+      responses:
+        '200':
+          description: Provider details
+        '304':
+          description: Not modified (ETag still matches)
+        '404':
+          description: ProviderNotFound
+    patch:
+      tags:
+        - Providers
+      operationId: updateProvider
+      summary: Partially update a provider (If-Match guarded)
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+        - $ref: '#/components/parameters/OrganizationId'
+        - $ref: '#/components/parameters/IfMatch'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                endpoint:
+                  type: string
+                timeoutMs:
+                  type: integer
+                enabled:
+                  type: boolean
+      responses:
+        '200':
+          description: Provider updated
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '404':
+          description: ProviderNotFound
+        '409':
+          description: Name conflict
+        '412':
+          description: Precondition failed (stale If-Match)
+    delete:
+      tags:
+        - Providers
+      operationId: deleteProvider
+      summary: Remove a provider and its models
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+        - $ref: '#/components/parameters/OrganizationId'
+      responses:
+        '204':
+          description: Provider removed
+        '404':
+          description: ProviderNotFound
+
+  /v1/providers/{providerId}/models:
+    post:
+      tags:
+        - Models
+      operationId: registerModel
+      summary: Register a model for a provider
+      description: >
+        Adds a model associated with an existing provider, including
+        its capabilities, sensitivity level, and cost information.
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+        - $ref: '#/components/parameters/OrganizationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModelRegistration'
+      responses:
+        '201':
+          description: Model registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - modelId
+                  - providerId
+                  - name
+                properties:
+                  modelId:
+                    type: string
+                  providerId:
+                    type: string
+                  name:
+                    type: string
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NotAuthorised'
+        '404':
+          description: ProviderNotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/route-and-invoke:
+    post:
+      tags:
+        - Routing
+      operationId: routeAndInvoke
+      summary: Select a model and invoke an AI provider
+      description: >
+        Selects a suitable model and provider according to the AI request,
+        policy decision, model preference, capability, sensitivity
+        requirements, cost, provider health, and availability. Provider
+        invocation is protected by timeout, retry, circuit-breaker,
+        and fallback mechanisms where configured. Transient failures carry
+        Retry-After. All failures use RFC 9457 Problem Details
+        (application/problem+json) — see components/schemas/Problem.
+      parameters:
+        - $ref: '#/components/parameters/OrganizationId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteAndInvokeRequest'
+      responses:
+        '200':
+          description: Provider response received successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RouteAndInvokeResponse'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NotAuthorised'
+        '503':
+          description: NoModelAvailable or ProviderUnavailable
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '504':
+          description: Provider timeout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v1/providers/{providerId}/health:
+    get:
+      tags:
+        - Providers
+      operationId: getProviderHealth
+      summary: Get provider health and circuit state
+      description: >
+        Returns the provider's health status and circuit-breaker state
+        without exposing the internal mechanism used to calculate them.
+      parameters:
+        - $ref: '#/components/parameters/ProviderId'
+        - $ref: '#/components/parameters/OrganizationId'
+      responses:
+        '200':
+          description: Provider health information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderHealth'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/NotAuthorised'
+        '404':
+          description: ProviderNotFound
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+components:
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    OrganizationId:
+      name: X-Organization-Id
+      in: header
+      required: true
+      description: Organization context for the operation.
+      schema:
+        type: string
+
+    ProviderId:
+      name: providerId
+      in: path
+      required: true
+      description: Public reference of the provider.
+      schema:
+        type: string
+
+    IfNoneMatch:
+      name: If-None-Match
+      in: header
+      required: false
+      description: Conditional GET — return 304 when the ETag still matches.
+      schema:
+        type: string
+
+    IfMatch:
+      name: If-Match
+      in: header
+      required: false
+      description: Conditional write — return 412 when the ETag no longer matches.
+      schema:
+        type: string
+
+  schemas:
+
+    Problem:
+      type: object
+      description: RFC 9457 Problem Details — the single error shape (A6 B1/B2).
+      required:
+        - type
+        - title
+        - status
+        - detail
+      properties:
+        type:
+          type: string
+          example: /errors/provider-conflict
+        title:
+          type: string
+          example: Provider already registered
+        status:
+          type: integer
+          example: 409
+        detail:
+          type: string
+        errors:
+          type: array
+          description: Field-level failures (B3) — [field, reason] pairs.
+          items:
+            type: array
+            items:
+              type: string
+        traceId:
+          type: string
+
+    ProviderConfiguration:
+      type: object
+      required:
+        - name
+        - type
+      properties:
+        name:
+          type: string
+          example: OpenAI
+        type:
+          type: string
+          enum:
+            - openai
+            - gemini
+            - local
+            - custom
+        endpoint:
+          type: string
+          format: uri
+          description: Optional provider endpoint.
+        timeoutMs:
+          type: integer
+          minimum: 1
+          description: Optional configured request timeout.
+        enabled:
+          type: boolean
+          default: true
+
+    ModelRegistration:
+      type: object
+      required:
+        - name
+        - capabilities
+        - sensitivityLevel
+      properties:
+        name:
+          type: string
+          example: gpt-model
+        capabilities:
+          type: array
+          minItems: 1
+          items:
+            type: string
+          example:
+            - text-generation
+            - summarization
+        sensitivityLevel:
+          $ref: '#/components/schemas/SensitivityLevel'
+        costInformation:
+          $ref: '#/components/schemas/CostInformation'
+        enabled:
+          type: boolean
+          default: true
+
+    Model:
+      type: object
+      required:
+        - modelId
+        - name
+        - providerId
+        - capabilities
+        - sensitivityLevel
+      properties:
+        modelId:
+          type: string
+        name:
+          type: string
+        providerId:
+          type: string
+        providerName:
+          type: string
+        capabilities:
+          type: array
+          items:
+            type: string
+        sensitivityLevel:
+          $ref: '#/components/schemas/SensitivityLevel'
+        costInformation:
+          $ref: '#/components/schemas/CostInformation'
+        enabled:
+          type: boolean
+
+    SensitivityLevel:
+      type: string
+      enum:
+        - public
+        - internal
+        - confidential
+        - restricted
+
+    CostInformation:
+      type: object
+      description: Optional model cost information used for routing.
+      properties:
+        inputCostPer1KTokens:
+          type: number
+          format: double
+          minimum: 0
+        outputCostPer1KTokens:
+          type: number
+          format: double
+          minimum: 0
+        currency:
+          type: string
+          example: USD
+
+    RouteAndInvokeRequest:
+      type: object
+      required:
+        - request
+        - policyDecision
+      properties:
+        request:
+          $ref: '#/components/schemas/AIRequest'
+        policyDecision:
+          type: string
+          enum:
+            - ALLOW
+            - MASK
+            - ROUTE
+          description: >
+            Approved routing decision from the Policy & Approval Service.
+            BLOCK and REQUIRE_APPROVAL requests must not be invoked.
+        modelPreference:
+          type: string
+          nullable: true
+          description: Optional requested model or model class.
+
+    AIRequest:
+      type: object
+      required:
+        - messages
+      properties:
+        requestId:
+          type: string
+          description: Public request reference.
+        messages:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/Message'
+        metadata:
+          type: object
+          additionalProperties: true
+
+    Message:
+      type: object
+      required:
+        - role
+        - content
+      properties:
+        role:
+          type: string
+          enum:
+            - system
+            - user
+            - assistant
+        content:
+          type: string
+
+    RouteAndInvokeResponse:
+      type: object
+      required:
+        - modelUsed
+        - providerId
+        - latencyMs
+        - status
+      properties:
+        response:
+          type: string
+          description: AI provider response after applicable filtering.
+        modelUsed:
+          type: string
+        providerId:
+          type: string
+        latencyMs:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+            - success
+            - failed
+        traceId:
+          type: string
+
+    ProviderHealth:
+      type: object
+      required:
+        - providerId
+        - status
+        - circuitState
+      properties:
+        providerId:
+          type: string
+        status:
+          type: string
+          enum:
+            - healthy
+            - degraded
+            - unavailable
+            - unknown
+        circuitState:
+          type: string
+          enum:
+            - closed
+            - open
+            - half_open
+        lastCheckedAt:
+          type: string
+          format: date-time
+        latencyMs:
+          type: integer
+          minimum: 0
+          nullable: true
+
+    Error:
+      type: object
+      required:
+        - code
+        - message
+      properties:
+        code:
+          type: string
+          example: ProviderUnavailable
+        message:
+          type: string
+        traceId:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+
+  responses:
+    Unauthenticated:
+      description: NotAuthenticated or invalid authentication token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    NotAuthorised:
+      description: Caller is not authorised to perform this operation
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    ValidationError:
+      description: ValidationError or InvalidRequest
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Unexpected internal failure
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
