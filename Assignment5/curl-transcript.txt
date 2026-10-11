@@ -1,0 +1,87 @@
+### 1. Create provider (201 + Location)
+POST /v1/providers -> HTTP 201
+location: /v1/providers/prov-1
+etag: W/"3d-1IOQb4/kouiM6zkKDsHzqO31ZJI"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 99
+access-control-allow-origin: *
+{"providerId":"prov-1","name":"OpenAI","status":"registered"}
+
+### 2. Idempotent repeat (same key -> 200 original)
+POST /v1/providers -> HTTP 200
+etag: W/"3d-1IOQb4/kouiM6zkKDsHzqO31ZJI"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 98
+access-control-allow-origin: *
+{"providerId":"prov-1","name":"OpenAI","status":"registered"}
+
+### 3. Register model (201 + Location)
+POST /v1/providers/prov-1/models -> HTTP 201
+location: /v1/providers/prov-1/models/model-1
+etag: W/"3e-E/INIDFfk+VKaX5XcUKa+5BEc0I"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 97
+access-control-allow-origin: *
+{"modelId":"model-1","providerId":"prov-1","name":"gpt-model"}
+
+### 4. Single read (200 + ETag + Cache-Control)
+GET /v1/providers/prov-1/models/model-1 -> HTTP 200
+etag: "mp-f1ab2248f5d22d84"
+cache-control: private, max-age=60
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 96
+access-control-allow-origin: *
+{"modelId":"model-1","name":"gpt-model","providerId":"prov-1","providerName":"OpenAI","capabilities":["text-generation"],"sensitivityLevel":"internal","enabled":true}
+
+### 5. Conditional GET (304, no body)
+Request headers: If-None-Match: "mp-f1ab2248f5d22d84"
+GET /v1/providers/prov-1/models/model-1 -> HTTP 304
+etag: "mp-f1ab2248f5d22d84"
+cache-control: private, max-age=60
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 95
+access-control-allow-origin: *
+(no body)
+
+### 6. Conditional write stale (412)
+Request headers: If-Match: stale
+PATCH /v1/providers/prov-1 -> HTTP 412
+etag: W/"c3-t1TPXw14VmSjJET5xK4lRnYkpm4"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 93
+access-control-allow-origin: *
+{"type":"/errors/precondition-failed","title":"Precondition failed","status":412,"detail":"Provider changed since you read it; re-read and retry","traceId":"d9d95c39-90b9-4b7a-b477-39e441ca9179"}
+
+### 7. Conditional write fresh (200)
+Request headers: If-Match: "mp-243d8095edbb7788"
+PATCH /v1/providers/prov-1 -> HTTP 200
+etag: "mp-243d8095edbb7788"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 92
+access-control-allow-origin: *
+{"providerId":"prov-1","name":"OpenAI","type":"openai","status":"registered","createdAt":"2026-10-09T12:17:18.647Z"}
+
+### 8. Malformed body (400)
+POST /v1/providers -> HTTP 400
+etag: W/"10f-sNLLNtGVizPrZebx+oS0WRFtTGg"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 91
+access-control-allow-origin: *
+{"type":"/errors/invalid-request","title":"Invalid request","status":400,"detail":"Provider configuration is invalid","errors":[["name","required non-empty string"],["type","must be one of openai, gemini, local, custom"]],"traceId":"20158b0a-502a-4eb4-894a-601ea732dcc9"}
+
+### 9. Missing resource (404)
+GET /v1/providers/prov-999/health -> HTTP 404
+etag: W/"a0-KjUtVN7wWVbc4oIX17xRq4Km//8"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 90
+access-control-allow-origin: *
+{"type":"/errors/provider-not-found","title":"Provider not found","status":404,"detail":"No provider prov-999","traceId":"89665769-268c-4b64-ada5-c5820f22b883"}
+
+### 10. Missing bearer (401)
+GET /v1/models -> HTTP 401
+etag: W/"9d-CuIuAmTt6x2SZU9DaJMMXMn/opM"
+x-ratelimit-limit: 100
+x-ratelimit-remaining: 99
+access-control-allow-origin: *
+{"type":"/errors/unauthenticated","title":"Not authenticated","status":401,"detail":"Bearer token required","traceId":"b4f88bf8-71e0-44ee-836e-f5d5c5bc1061"}
+
