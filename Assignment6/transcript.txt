@@ -1,0 +1,69 @@
+### D1 success: create provider
+POST /v1/providers -> HTTP 201
+content-type: application/json; charset=utf-8
+location: /v1/providers/prov-1
+etag: W/"3d-1IOQb4/kouiM6zkKDsHzqO31ZJI"
+{"providerId":"prov-1","name":"OpenAI","status":"registered"}
+
+### B3/C2 field-level 422 (three bad fields at once)
+POST /v1/providers -> HTTP 422
+content-type: application/problem+json; charset=utf-8
+etag: W/"13a-c5h0N3JtMgw/0KUyv1MVVK1xCZo"
+{"type":"/errors/invalid-request","title":"Invalid request","status":422,"detail":"Provider configuration is invalid","errors":[["name","required non-empty string"],["type","must be one of openai, gemini, local, custom"],["timeoutMs","must be a positive integer"]],"traceId":"cec923aa-ba35-4b5c-afb6-a968fe35f32f"}
+
+### D2 conflict 409 (duplicate name)
+POST /v1/providers -> HTTP 409
+content-type: application/problem+json; charset=utf-8
+etag: W/"bb-nECfvmNbeFB8lTriv+3O0i/vWPU"
+{"type":"/errors/provider-conflict","title":"Provider already registered","status":409,"detail":"Provider 'OpenAI' is already registered","traceId":"19cb07ba-7f1e-4a50-bec0-d2bd0225036c"}
+
+### D2 unknown id 404
+GET /v1/providers/prov-999/health -> HTTP 404
+content-type: application/problem+json; charset=utf-8
+etag: W/"a0-ogrB7kAegr0gS6a76q8Q0kzluOY"
+{"type":"/errors/provider-not-found","title":"Provider not found","status":404,"detail":"No provider prov-999","traceId":"eef7264d-783d-47d8-8a20-4adffe929c6b"}
+
+### D2 missing token 401
+GET /v1/models -> HTTP 401
+content-type: application/problem+json; charset=utf-8
+etag: W/"9d-wE6XDkmNFfTtysDz+if4/v0isqU"
+{"type":"/errors/unauthenticated","title":"Not authenticated","status":401,"detail":"Bearer token required","traceId":"a2d12594-6afd-40a4-a476-2fba5af29686"}
+
+### D2 no-model 503 + Retry-After
+POST /v1/route-and-invoke -> HTTP 503
+content-type: application/problem+json; charset=utf-8
+retry-after: 30
+etag: W/"b6-JZ2pOQEE9gWlB17BxclcwMsF8tY"
+{"type":"/errors/no-model-available","title":"No model available","status":503,"detail":"No models registered for this organisation","traceId":"14a70657-b086-49b3-95fd-2c80056aff20"}
+
+### register model 201
+POST /v1/providers/prov-1/models -> HTTP 201
+content-type: application/json; charset=utf-8
+location: /v1/providers/prov-1/models/model-1
+etag: W/"3e-E/INIDFfk+VKaX5XcUKa+5BEc0I"
+{"modelId":"model-1","providerId":"prov-1","name":"gpt-model"}
+
+### D1/D3 same order as JSON
+GET /v1/providers/prov-1/models/model-1 -> HTTP 200 (Accept: application/json)
+content-type: application/json; charset=utf-8
+etag: "mp-f1ab2248f5d22d84"
+{"modelId":"model-1","name":"gpt-model","providerId":"prov-1","providerName":"OpenAI","capabilities":["text-generation"],"sensitivityLevel":"internal","enabled":true}
+
+### D3 same order as XML
+GET /v1/providers/prov-1/models/model-1 -> HTTP 200 (Accept: application/xml)
+content-type: application/xml; charset=utf-8
+etag: "mp-f1ab2248f5d22d84"
+<?xml version="1.0" encoding="UTF-8"?><response><modelId>model-1</modelId><name>gpt-model</name><providerId>prov-1</providerId><providerName>OpenAI</providerName><capabilities><item>text-generation</item></capabilities><sensitivityLevel>internal</sensitivityLevel><enabled>true</enabled></response>
+
+### D3 406 cannot produce
+GET /v1/models -> HTTP 406 (Accept: text/csv)
+content-type: application/problem+json; charset=utf-8
+etag: W/"b0-P+pJ/qCukVPS5jgn258LXgCA4/8"
+{"type":"/errors/not-acceptable","title":"Not acceptable","status":406,"detail":"Supported: application/json, application/xml","traceId":"690d6640-415c-4b0b-946e-e931ef8af66a"}
+
+### route-and-invoke 200 happy path
+POST /v1/route-and-invoke -> HTTP 200
+content-type: application/json; charset=utf-8
+etag: W/"ac-Gd+YxlfP1TXLmxS+Yft7qU2afPk"
+{"response":"[OpenAI/openai mock] summarise","modelUsed":"model-1","providerId":"prov-1","latencyMs":23,"status":"success","traceId":"e69cb832-db26-4720-9f18-deebd83e309b"}
+
