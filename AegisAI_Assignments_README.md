@@ -825,14 +825,13 @@ environment.
 
 ## 12. Team
 
-AegisAI is a Group 7 submission for CS 543 --- Web Services.
+AegisAI is a Group 7 submission for **CS 543 — Web Services**.
 
-  Role           Team member         Roll number
-  -------------- ------------------- ---------------
-  Group Leader   Aditi Garg          `20251651008`
-  Group Member   Neha Nupur          `20251651064`
-  Group Member   Shivam Kumar Soni   `20251651084`
-
+| Role | Team Member | Roll Number |
+|:---|:---|:---:|
+| Group Leader | Aditi Garg | `20251651008` |
+| Group Member | Neha Nupur | `20251651064` |
+| Group Member | Shivam Kumar Soni | `20251651084` |
 ------------------------------------------------------------------------
 
 ## 13. Learning Outcomes
