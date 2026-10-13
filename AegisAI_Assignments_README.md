@@ -5,6 +5,13 @@
 **Repository:**
 [github.com/neha-nupur/AegisAi](https://github.com/neha-nupur/AegisAi)
 
+## 🎥 Working Demonstration
+
+Watch the working demonstration of AegisAI, showcasing the project workflows and assignment tasks.
+
+**[▶ View AegisAI Working Demonstration on Google Drive](https://drive.google.com/drive/folders/1A1YDtDa6HKp9rCS8zID1kRL678w3LjIL?usp=sharing)**
+
+
 AegisAI is a course project that designs and demonstrates a secure
 governance layer between enterprise applications or AI agents and
 external AI model providers. It centralizes the controls that should
